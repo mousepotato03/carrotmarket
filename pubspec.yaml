@@ -46,6 +46,7 @@ dependencies:
   shared_preferences: ^2.0.15
   isar: 3.1.0
   isar_flutter_libs: 3.1.0
+  flutter_riverpod: ^2.5.1
 
   #architecture
   event_bus: ^2.0.0
@@ -110,6 +111,11 @@ flutter:
     - assets/image/icon/
     - assets/image/flag/
     - assets/image/darkmode/
+    - assets/image/fab/
+    - assets/image/detail/
+    - assets/image/home/
+    - assets/image/notification/
+    - assets/image/write/
     - assets/translations/
     - assets/
 
