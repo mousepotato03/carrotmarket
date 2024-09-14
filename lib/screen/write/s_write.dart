@@ -1,17 +1,32 @@
+import 'dart:io';
+import 'dart:math';
+
 import 'package:fast_app_base/common/common.dart';
 import 'package:fast_app_base/common/util/app_keyboard_util.dart';
 import 'package:fast_app_base/common/widget/round_button_theme.dart';
 import 'package:fast_app_base/common/widget/w_round_button.dart';
+import 'package:fast_app_base/entity/post/vo_simple_product_post.dart';
+import 'package:fast_app_base/entity/product/product_status.dart';
+import 'package:fast_app_base/entity/user/vo_address.dart';
+import 'package:fast_app_base/screen/main/tab/home/provider/post_provider.dart';
+import 'package:fast_app_base/screen/post_detail/s_post_detail.dart';
+import 'package:fast_app_base/screen/write/d_select_image_source.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
-class WriteScreen extends StatefulWidget {
+import '../../entity/dummies.dart';
+import '../../entity/product/vo_product.dart';
+
+class WriteScreen extends ConsumerStatefulWidget {
   const WriteScreen({super.key});
 
   @override
-  State<WriteScreen> createState() => _WriteScreenState();
+  ConsumerState<WriteScreen> createState() => _WriteScreenState();
 }
 
-class _WriteScreenState extends State<WriteScreen> with KeyboardDetector {
+class _WriteScreenState extends ConsumerState<WriteScreen>
+    with KeyboardDetector {
   final List<String> imageList = [];
 
   final titleController = TextEditingController();
@@ -53,7 +68,25 @@ class _WriteScreenState extends State<WriteScreen> with KeyboardDetector {
           children: [
             _ImageSelectWidget(
               imageList,
-              onTap: () {},
+              onTapDeleteImage: (imagePath) {
+                setState(() {
+                  imageList.remove(imagePath);
+                });
+              },
+              onTap: () async {
+                final selectedSource = await SelectImageSourceDialog().show();
+                if (selectedSource == null) {
+                  return;
+                }
+                final file =
+                    await ImagePicker().pickImage(source: selectedSource);
+                if (file == null) {
+                  return;
+                }
+                setState(() {
+                  imageList.add(file.path);
+                });
+              },
             ),
             _TitleEditor(titleController),
             height30,
@@ -64,7 +97,7 @@ class _WriteScreenState extends State<WriteScreen> with KeyboardDetector {
         ).pSymmetric(h: 15),
       ),
       bottomSheet: isKeyboardOn
-          ? Container()
+          ? null
           : RoundButton(
               text: isLoading ? "저장중" : "작성 완료",
               isFullWidth: true,
@@ -72,7 +105,10 @@ class _WriteScreenState extends State<WriteScreen> with KeyboardDetector {
               isEnabled: isValid,
               rightWidget: isLoading
                   ? const SizedBox(
-                      width: 15, height: 15, child: CircularProgressIndicator()).pOnly(right: 80)
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator())
+                      .pOnly(right: 80)
                   : null,
               onTap: () {
                 final title = titleController.text;
@@ -81,6 +117,24 @@ class _WriteScreenState extends State<WriteScreen> with KeyboardDetector {
                 setState(() {
                   isLoading = true;
                 });
+                final list = ref.read(postProvider);
+                final simpleProductPost = SimpleProductPost(
+                    6,
+                    user3,
+                    Product(
+                        user3, title, price, ProductStatus.normal, imageList),
+                    title,
+                    Address("서울시 다트구 플러터동", "플러터동"),
+                    0,
+                    0,
+                    DateTime.now());
+                ref.read(postProvider.notifier).state = List.of(list)
+                  ..add(simpleProductPost);
+                Nav.pop(context);
+                Nav.push(PostDetailScreen(
+                  simpleProductPost.id,
+                  simpleProductPost: simpleProductPost,
+                ));
               },
             ),
     );
@@ -95,8 +149,10 @@ class _WriteScreenState extends State<WriteScreen> with KeyboardDetector {
 class _ImageSelectWidget extends StatelessWidget {
   final List<String> imageList;
   final VoidCallback onTap;
+  final void Function(String path) onTapDeleteImage;
 
-  const _ImageSelectWidget(this.imageList, {super.key, required this.onTap});
+  const _ImageSelectWidget(this.imageList,
+      {super.key, required this.onTap, required this.onTapDeleteImage});
 
   @override
   Widget build(BuildContext context) {
@@ -104,29 +160,76 @@ class _ImageSelectWidget extends StatelessWidget {
       height: 100,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(
+        child: Row(children: [
+          SelectImageButton(onTap: onTap, imageList: imageList)
+              .pOnly(top: 10, right: 4),
+          ...imageList.map(
+            (imagePath) => Stack(
+              children: [
+                SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: Image.file(
+                          File(imagePath),
+                          fit: BoxFit.fill,
+                        ))).pOnly(left: 4, right: 10, top: 10),
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: Tap(
+                      onTap: () {
+                        onTapDeleteImage(imagePath);
+                      },
+                      child: Transform.rotate(
+                        angle: pi / 4,
+                        child: Icon(Icons.add_circle),
+                      ).pOnly(left: 30, bottom: 30),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        ]),
+      ),
+    );
+  }
+}
+
+class SelectImageButton extends StatelessWidget {
+  const SelectImageButton({
+    super.key,
+    required this.onTap,
+    required this.imageList,
+  });
+
+  final VoidCallback onTap;
+  final List<String> imageList;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tap(
+      onTap: onTap,
+      child: SizedBox(
+        width: 80,
+        height: 80,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 80,
-              height: 80,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.camera_alt),
-                  RichText(
-                    text: TextSpan(children: [
-                      TextSpan(
-                        text: imageList.length.toString(),
-                        style: TextStyle(color: Colors.orange),
-                      ),
-                      TextSpan(text: '/10'),
-                    ]),
-                  )
-                ],
-              ).box.rounded.border(color: Colors.grey).make(),
+            Icon(Icons.camera_alt),
+            RichText(
+              text: TextSpan(children: [
+                TextSpan(
+                  text: imageList.length.toString(),
+                  style: TextStyle(color: Colors.orange),
+                ),
+                TextSpan(text: '/10'),
+              ]),
             )
           ],
-        ),
+        ).box.rounded.border(color: Colors.grey).make(),
       ),
     );
   }
