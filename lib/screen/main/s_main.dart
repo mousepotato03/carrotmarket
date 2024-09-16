@@ -8,10 +8,12 @@ import '../../common/common.dart';
 import 'fab/w_floating_daangn_button.dart';
 import 'w_menu_drawer.dart';
 
-final currentTabProvider = StateProvider((ref)=>TabItem.home);
+final currentTabProvider = StateProvider((ref) => TabItem.home);
 
 class MainScreen extends ConsumerStatefulWidget {
-  const MainScreen({super.key});
+  final TabItem firstTab;
+
+  const MainScreen({super.key, this.firstTab = TabItem.home,});
 
   @override
   ConsumerState<MainScreen> createState() => MainScreenState();
@@ -21,9 +23,10 @@ class MainScreenState extends ConsumerState<MainScreen>
     with SingleTickerProviderStateMixin {
   final tabs = TabItem.values;
   late final List<GlobalKey<NavigatorState>> navigatorKeys =
-      TabItem.values.map((e) => GlobalKey<NavigatorState>()).toList();
+  TabItem.values.map((e) => GlobalKey<NavigatorState>()).toList();
 
   TabItem get _currentTab => ref.watch(currentTabProvider);
+
   int get _currentIndex => tabs.indexOf(_currentTab);
 
   GlobalKey<NavigatorState> get _currentTabNavigationKey =>
@@ -37,6 +40,16 @@ class MainScreenState extends ConsumerState<MainScreen>
   @override
   void initState() {
     super.initState();
+  }
+
+  @override
+  void didUpdateWidget(covariant MainScreen oldWidget) {
+    if (oldWidget.firstTab != widget.firstTab) {
+      delay(() {
+        ref.read(currentTabProvider.notifier).state = widget.firstTab;
+      }, 0.ms);
+    }
+    super.didUpdateWidget(oldWidget);
   }
 
   @override
@@ -75,19 +88,21 @@ class MainScreenState extends ConsumerState<MainScreen>
 
   bool get isRootPage =>
       _currentTab == TabItem.home &&
-      _currentTabNavigationKey.currentState?.canPop() == false;
+          _currentTabNavigationKey.currentState?.canPop() == false;
 
-  IndexedStack get pages => IndexedStack(
-      index: _currentIndex,
-      children: tabs
-          .mapIndexed((tab, index) => Offstage(
-        offstage: _currentTab != tab,
-        child: TabNavigator(
-          navigatorKey: navigatorKeys[index],
-          tabItem: tab,
-        ),
-      ))
-          .toList());
+  IndexedStack get pages =>
+      IndexedStack(
+          index: _currentIndex,
+          children: tabs
+              .mapIndexed((tab, index) =>
+              Offstage(
+                offstage: _currentTab != tab,
+                child: TabNavigator(
+                  navigatorKey: navigatorKeys[index],
+                  tabItem: tab,
+                ),
+              ))
+              .toList());
 
   void _handleBackPressed(bool didPop) {
     if (!didPop) {
@@ -132,16 +147,19 @@ class MainScreenState extends ConsumerState<MainScreen>
   List<BottomNavigationBarItem> navigationBarItems(BuildContext context) {
     return tabs
         .mapIndexed(
-          (tab, index) => tab.toNavigationBarItem(
+          (tab, index) =>
+          tab.toNavigationBarItem(
             context,
             isActivated: _currentIndex == index,
           ),
-        )
+    )
         .toList();
   }
 
   void _changeTab(int index) {
-    ref.read(currentTabProvider.notifier).state = tabs[index];
+    ref
+        .read(currentTabProvider.notifier)
+        .state = tabs[index];
   }
 
   BottomNavigationBarItem bottomItem(bool activate, IconData iconData,

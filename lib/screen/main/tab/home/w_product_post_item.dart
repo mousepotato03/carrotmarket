@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fast_app_base/common/common.dart';
 import 'package:fast_app_base/screen/post_detail/s_post_detail.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 import '../../../../entity/post/vo_simple_product_post.dart';
@@ -15,7 +16,7 @@ class ProductPostItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tap(
       onTap: () {
-        Nav.push(PostDetailScreen(post.id, simpleProductPost: post,));
+        context.go('/main/localLife/${post.id}',extra: post);
       },
       child: Stack(
         children: [
